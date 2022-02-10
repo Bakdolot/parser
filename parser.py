@@ -51,8 +51,17 @@ options.add_argument('--disable-extentions')
 driver = webdriver.Chrome(DRIVER, options=options, desired_capabilities=capabilities)
 
 
+def get_access_token():
+    body = {
+        'phone': '996770266804',
+        'password': 'admin'
+    }
+    response  = requests.post('https://api.domket.kg/account/token/', body)
+    token = response.json()['access']
+    return token
 
-headers = {"Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjQ0NTczNzQxLCJqdGkiOiI0MGUxM2JhMTc2YmM0MmE0YTM1YjRiMjY5NTk3NzZkZSIsInVzZXJfaWQiOjI2LCJwaG9uZSI6Ijk5NjU1MDg3NDU3NyJ9.HlIJfpaggCbOoWmMBMUFM8_8PT2J5f3CZRPO3Qdg-W0"}
+
+headers = {"Authorization": "Bearer " + get_access_token()}
 
 def driver_scrolling(url, page):
     driver.get(url.format(randint(0, page)))
