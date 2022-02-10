@@ -19,7 +19,7 @@ DAILY_RENT_APARTMENT =['https://lalafo.kg/kyrgyzstan/kvartiry/arenda-kvartir/pos
 LONG_TERM_RENT_APARTMENT = ['https://lalafo.kg/kyrgyzstan/kvartiry/arenda-kvartir/dolgosrochnaya-arenda-kvartir?page={}', 'apartment_long_term_rent.txt', 1, 1, 240]
 
 # Дома
-SALE_HOUSE = ['https://lalafo.kg/kyrgyzstan/doma-i-dachi/prodazha-domov?page={}', 'house_sale.txt', 2, 2, 270]
+SALE_HOUSE = ['https://lalafo.kg/kyrgyzstan/doma-i-dachi/prodazha-domov?page={}', 'house_sale.txt', 2, 2, 265]
 DAILY_RENT_HOUSE = ['https://lalafo.kg/kyrgyzstan/doma-i-dachi/arenda-domov/posutochno-arenda-domov?page={}', 'house_daily_rent.txt', 2, 1, 4]
 LONG_TERM_RENT_HOUSE = ['https://lalafo.kg/kyrgyzstan/doma-i-dachi/arenda-domov/dolgosrochno-dom?page={}', 'house_long_term_rent.txt', 2, 1, 55]
 
@@ -28,8 +28,8 @@ SALE_GARAGE = ['https://lalafo.kg/kyrgyzstan/garaji/prodayu-garazh?page={}', 'ga
 RENT_GARAGE = ['https://lalafo.kg/kyrgyzstan/garaji/sdayu-garazh?page={}', 'garage_rent.txt', 6, 1, 1]
 
 # Земельные участки
-SALE_SECTION = ['https://lalafo.kg/kyrgyzstan/zemelnye-uchastki/prodazha-zemli?page={}', 'section_sale.txt', 4, 2, 190]
-RENT_SECTION = ['https://lalafo.kg/kyrgyzstan/zemelnye-uchastki/arenda-zemli?page={}', 'section_rent.txt', 4, 1, 2]
+SALE_SECTION = ['https://lalafo.kg/kyrgyzstan/zemelnye-uchastki/prodazha-zemli?page={}', 'section_sale.txt', 4, 2, 170]
+RENT_SECTION = ['https://lalafo.kg/kyrgyzstan/zemelnye-uchastki/arenda-zemli?page={}', 'section_rent.txt', 4, 1, 1]
 
 DRIVER = f'{BASE_DIR}/chromedriver_linux64/chromedriver'
 
@@ -52,7 +52,7 @@ driver = webdriver.Chrome(DRIVER, options=options, desired_capabilities=capabili
 
 
 
-headers = {"Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjM3MzIwOTY1LCJqdGkiOiI4MzhlMDMxODdkZGE0ODhjODRiMDRjMWQyMGViMjEyMCIsInVzZXJfaWQiOjEsInBob25lIjoiOTk2NzcwMjY2ODA0In0.OLjdsOuxCJnRHBl_Y1xliHzgZfpY3A0zFbMH1lQb1Jk"}
+headers = {"Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjQ0NTczNzQxLCJqdGkiOiI0MGUxM2JhMTc2YmM0MmE0YTM1YjRiMjY5NTk3NzZkZSIsInVzZXJfaWQiOjI2LCJwaG9uZSI6Ijk5NjU1MDg3NDU3NyJ9.HlIJfpaggCbOoWmMBMUFM8_8PT2J5f3CZRPO3Qdg-W0"}
 
 def driver_scrolling(url, page):
     driver.get(url.format(randint(0, page)))
@@ -68,6 +68,7 @@ def driver_scrolling(url, page):
 def get_data():
     urls = []
     images = []
+    num = 0
     for i in driver.get_log('performance'):
         log = json.loads(i['message'])['message']
         try:
@@ -75,11 +76,18 @@ def get_data():
                 value = json.loads(driver.execute_cdp_cmd("Network.getResponseBody", {"requestId": log["params"]["requestId"]})['body'])
                 if 'items' in value.keys():
                     for i in value['items']:
+                        num += 1
+                        if num == 89:
+                            break
                         urls.append('https://lalafo.kg'+i['url'])
                         img = []
-                        for j in i['images']:
-                            img.append(j['original_url'])
-                        images.append(img)
+                        if i.get('images'):
+                            for j in i['images']:
+                                img.append(j['original_url'])
+                        if img not in images:
+                            images.append(img)
+                        else:
+                            images.append([])
         except KeyError:
             continue
     return urls, images
@@ -91,7 +99,7 @@ def write_file(data):
 
     driver.close()
     driver.quit()
-
+ 
 
 
 def get_elements(urls: list, images: list) -> list:
@@ -155,6 +163,7 @@ def response_data(data, fields, base_fields, sell_type, property_type):
 
     fields_with_values = fields[1]
     fields = fields[0]
+    my_dict = {}
     for element in data:
         try:
             temporary = {
@@ -175,7 +184,14 @@ def response_data(data, fields, base_fields, sell_type, property_type):
                 if fil in list(element):
                     temporary[base_fields[fil]] = float(element[fil][0])
             if element.get('images'):
-                imgs = [requests.get(image).content for image in element['images']]
+                list1 = []
+                for i in element['images']:
+                    if my_dict.get(i):
+                        element['images'].remove(i)
+                    else:
+                        my_dict[i]='something'
+                        list1.append(i)
+                imgs = [requests.get(image).content for image in list1]
                 images = []
                 for image in imgs:
                     images.append(('images', (str(uuid.uuid4())+'.jpeg', image, 'image/jpeg')))
@@ -202,12 +218,12 @@ def response_data(data, fields, base_fields, sell_type, property_type):
 
 
             response = requests.post('https://api.domket.kg/ad/create/', headers=headers, data=temporary, files=images)
-            print(response.json())
+           #print(response.json())
             time.sleep(0.3)
 
         except Exception as e:
                 print(e)
-    return response   
+    return my_dict
 
 
 
@@ -216,14 +232,17 @@ def response_data(data, fields, base_fields, sell_type, property_type):
 def main(category):   
     driver_scrolling(eval(category)[0], eval(category)[4])
     urls, images = get_data()
+    with open('/home/mylog.log', 'a') as e:
+        e.write(f'{len(urls)}')
     print(f'urls len >> {len(urls)}')
+    print(f'images len >> {len(images)}')
     data = get_elements(urls, images)
     write_file(data)
     data = temporary_data(f'{BASE_DIR}/outputs/lalafo_info.txt')
     fields = get_fields(f'{BASE_DIR}/outputs/category/{eval(category)[1]}')
     base_fields = temporary_data(f'{BASE_DIR}/outputs/base_fields.txt')
     payload = response_data(data, fields, base_fields, eval(category)[3], eval(category)[2])
-    print(len(data))
+    print(payload)
     # print(payload)
     
 
@@ -234,3 +253,5 @@ if __name__ == '__main__':
 
     except Exception as e:
         print(e)
+        driver.close()
+        driver.quit()
